@@ -1,33 +1,27 @@
 from html.parser import HTMLParser
 from urllib import parse
 
+
 class LinkFinder(HTMLParser):
 
-    def __init__(self):
+    def __init__(self, base_url, page_url):
         super().__init__()
         self.base_url = base_url
         self.page_url = page_url
-        self.link = set
+        self.links = set()
 
-
+    # When we call HTMLParser feed() this function is called when it encounters an opening tag <a>
     def handle_starttag(self, tag, attrs):
-        # print(tag)
-        if tag == "a":
+        if tag == 'a':
             for (attribute, value) in attrs:
-                if attribute == "href":
-                    url = parse.urljoin()
-
-
-    #when call HTMLParser feed(), this funktion is called when it encounters an opening tag <a>
-    def handle_starttag(selfself, tag, attrs):
-        if tag == "a":
-            for (attribute, value) in attrs:
-                if attribute == "href":
+                if attribute == 'href':
                     url = parse.urljoin(self.base_url, value)
-                    self.link.add(url)
+                    self.links.add(url)
 
+    def page_links(self):
+        return self.links
 
-    def error(self, mesaage):
+    def error(self, message):
         pass
 
 #finder = LinkFinder()
