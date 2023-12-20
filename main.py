@@ -1,52 +1,62 @@
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-import time
+import requests # HTTP užklausoms atlikti
+from bs4 import BeautifulSoup  # HTML turinio analizei
+import pandas as pd  # duomenų analizei ir CSV failų kūrimui
+import time  # laiko matavimui
+import os  # operacinės sistemos funkcionalumo (failų kūrimui) naudojimui
 
-def crawl(time_limit, source, return_format):
-    start_time = time.time()
-    data = []
+def download_image(image_url, folder_path, file_name):
+    response = requests.get(image_url)  # Atliekame HTTP GET užklausą į nurodytą nuotraukos URL
+    if response.status_code == 200:  # Jeigu užklausa sėkminga (HTTP statusas 200)
+        file_path = os.path.join(folder_path, file_name)  # Sukuriame pilną failo kelią
+        with open(file_path, 'wb') as file:  # Atidarome failą rašymui ('wb' rašymas baitais)
+            file.write(response.content)  # Įrašome gautą turinį į failą
+        return file_path  # Grąžiname sukurtą failo kelią
+    return None  # Grąžiname 'None', jei užklausa nesėkminga
 
-    # Nustatyti bazinį URL
-    base_url = "https://www.gintarine.lt"
-    if source == 'gintarine':
-        search_url = f"{base_url}/search?q=vitamin+c"
+def crawl_vitamin_c_products(time_limit, source, return_format, download_images=False):
+    start_time = time.time()  # Fiksuojame funkcijos pradžios laiką
+    data = {'product_name': [], 'price': [], 'image_url': [], 'image_path': []}  # Sukuriame tuščią duomenų žodyną
+    image_folder = 'downloaded_images'  # Nurodome aplanko pavadinimą nuotraukoms saugoti
 
-    while True:
-        # Patikrinti laiko limitą
-        if time.time() - start_time > time_limit:
-            break
+    if download_images and not os.path.exists(image_folder):  # Jeigu reikia atsisiųsti nuotraukas ir aplankas neegzistuoja
+        os.makedirs(image_folder)  # Sukuriame aplanką
 
-        # Atlikti užklausą į svetainę
-        response = requests.get(search_url)
-        soup = BeautifulSoup(response.content, 'html.parser')
+    try:
+        response = requests.get(source)  # Atliekame HTTP GET užklausą į nurodytą šaltinį
+        if response.status_code != 200:  # Jeigu užklausa nesėkminga
+            return "Failed to retrieve data from the source"  # Grąžiname klaidos pranešimą
 
-        # Išgauti produkto duomenis
-        products = soup.find_all('div', class_='product')
-        for product in products:
-            name = product.find('h2', class_='product-name').get_text(strip=True)
-            price = product.find('span', class_='price').get_text(strip=True)
-            image_url = product.find('img')['src']
+        soup = BeautifulSoup(response.content, 'html.parser')  # Analizuojame gautą HTML turinį su BeautifulSoup
 
-            data.append({
-                'Pavadinimas': name,
-                'Kaina': price,
-                'Nuotraukos URL': base_url + image_url
-            })
+        for product in soup.find_all('div', class_='product product-item product-item-31286'):  # Perrenkame per visus produktus (pagal HTML klasę)
+            product_name = product.find('h3', class_='product__title').text.strip()  # Ištraukiame produkto pavadinimą
+            price = product.find('span', class_='product__price--regular').text.strip()  # Ištraukiame produkto kainą
+            #image_url = product.find('img')['src']  # Ištraukiame nuotraukos URL
 
-        # Patikrinti, ar yra kitas puslapis
-        next_page = soup.find('a', {'aria-label': 'Next'})
-        if next_page:
-            search_url = base_url + next_page['href']
-        else:
-            break
+            data['product_name'].append(product_name)  # Įdedame pavadinimą į duomenų žodyną
+            data['price'].append(price)  # Įdedame kainą į duomenų žodyną
+            #data['image_url'].append(image_url)  # Įdedame nuotraukos URL į duomenų žodyną
 
-    # Grąžinti duomenis nurodytu formatu
-    if return_format == 'csv':
-        return pd.DataFrame(data).to_csv(index=False)
+            #if download_images:  # Jeigu reikia atsisiųsti nuotraukas
+                #image_path = download_image(image_url, image_folder, f"{product_name}.jpg")  # Atsisiunčiame nuotrauką
+                #data['image_path'].append(image_path)  # Įdedame nuotraukos vietinį kelią į duomenų žodyną
+
+            if time.time() - start_time > time_limit:  # Jeigu viršijamas nurodytas laiko limitas
+                break  # Nutraukiame ciklą
+
+    except Exception as e:
+        return str(e)  # Jeigu įvyksta klaida, grąžiname klaidos pranešimą
+
+    if return_format == 'csv':  # grąžinimo formatas yra CSV
+        return pd.DataFrame(data).to_csv(index=False)  # Konvertuojame duomenis į DataFrame ir grąžiname kaip CSV
     else:
-        return data
+        return data  # Priešingu atveju, grąžiname duomenis kaip žodyną
 
-# Pavyzdinis naudojimas
-rezultatas = crawl(time_limit=60, source='gintarine', return_format='csv')
-print(rezultatas)
+# Pavyzdinis funkcijos iškvietimas
+result = crawl_vitamin_c_products(
+    time_limit=100,
+    source="https://www.gintarine.lt/search?q=c+vitaminai",
+    return_format='csv',
+    #download_images=True
+)
+print(result)
