@@ -1,7 +1,7 @@
 from urllib.request import urlopen
-from link_finder import LinkFinder
-from domain import *
-from general import *
+from neaktualu.link_finder import LinkFinder
+from neaktualu.domain import *
+from neaktualu.general import *
 
 
 class Spider:

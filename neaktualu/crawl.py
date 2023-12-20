@@ -5,7 +5,7 @@ from domain import *
 from general import *
 import pandas as pd
 
-def crawl(time_limit=30, source='github', return_format='csv'):
+def crawl(time_limit=3, source='github', return_format='csv'):
     PROJECT_NAME = source  # You can change the project name based on the source
     HOMEPAGE = 'http://' + source + '.com/'
     DOMAIN_NAME = get_domain_name(HOMEPAGE)
@@ -78,7 +78,7 @@ def generate_dict_data():
     return crawled_data
 
 if __name__ == "__main__":
-    crawl(time_limit=30, source='github', return_format='csv')
+    crawl(time_limit=3, source='github', return_format='csv')
 
 
     # Implement functions to generate CSV and dictionary data
